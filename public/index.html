@@ -1,0 +1,483 @@
+     
+   <!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEM Ingenieros - Sistema de Certificados Digitales</title>
+    <!-- Tailwind CSS desde CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#0f172a',
+                            900: '#090d16',
+                            950: '#030712',
+                        },
+                        brand: {
+                            500: '#38bdf8',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- CryptoJS para cálculo local fallback de SHA-256 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(31, 41, 55, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-brand-500 selection:text-slate-900">
+
+    <!-- Navegación Superior -->
+    <header class="border-b border-slate-800 bg-slate-950/80 sticky top-0 z-50 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-gradient-to-tr from-brand-600 to-emerald-500 rounded-xl shadow-lg shadow-brand-500/20">
+                    <i data-lucide="shield-check" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <span class="text-lg font-bold bg-gradient-to-r from-white via-slate-200 to-brand-500 bg-clip-text text-transparent">
+                        SEM Ingenieros
+                    </span>
+                    <span class="hidden sm:inline-block text-xs text-slate-400 border-l border-slate-700 pl-2 ml-2 font-mono">
+                        v1.0.0 PostgreSQL & Pattern Architecture
+                    </span>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <div id="backendStatus" class="flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span id="backendStatusText">Modo Híbrido (Local/API)</span>
+                </div>
+                <button onclick="openModal()" class="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">
+                    <i data-lucide="cpu" class="w-4 h-4 text-brand-500"></i>
+                    <span>Ver Arquitectura</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido Principal -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-grow">
+        
+        <!-- Hero Section Header -->
+        <div class="text-center max-w-3xl mx-auto mb-10">
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white mb-3">
+                Sistema de Certificados Digitales Inmutables
+            </h1>
+            <p class="text-slate-400 text-sm sm:text-base leading-relaxed">
+                Plataforma corporativa de emisión y verificación instantánea de autenticidad respaldada en huellas criptográficas SHA-256 e infraestructura PostgreSQL.
+            </p>
+        </div>
+
+        <!-- Layout Grid en 2 columnas principales -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            
+            <!-- PANEL 1: Emisión (Admin) -->
+            <section class="glass-panel rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-500 to-indigo-500"></div>
+                
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2.5 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-500">
+                            <i data-lucide="file-plus-2" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-white">1. Panel de Emisión</h2>
+                            <p class="text-xs text-slate-400">Rol Administrador / Registro en BD</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-mono px-2.5 py-1 bg-slate-800 text-slate-400 rounded-md border border-slate-700">
+                        POST /emitir
+                    </span>
+                </div>
+
+                <form id="emitirForm" onsubmit="handleEmitir(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1.5">Código Único del Certificado</label>
+                        <div class="relative">
+                            <i data-lucide="qr-code" class="w-4 h-4 absolute left-3 top-3 text-slate-500"></i>
+                            <input type="text" id="codigoCertificado" required
+                                value="CERT-2026-001"
+                                class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 font-mono transition">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1.5">Contenido / Documento del Certificado</label>
+                        <textarea id="textoEmitir" rows="4" required
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition"
+                            placeholder="Ingrese el texto íntegro del certificado o arrastre un archivo PDF de muestra...">Documento oficial validado por SEM Ingenieros - Cohorte 2026</textarea>
+                    </div>
+
+                    <!-- Botones Rápidos de Muestra -->
+                    <div class="flex flex-wrap gap-2">
+                        <span class="text-xs text-slate-400 self-center mr-1">Ejemplos:</span>
+                        <button type="button" onclick="loadSample('cert1')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-700 transition">Certificado Cohorte 2026</button>
+                        <button type="button" onclick="loadSample('cert2')" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-700 transition">Diplomado ISO 9001</button>
+                    </div>
+
+                    <button type="submit" id="btnEmitir"
+                        class="w-full mt-2 bg-gradient-to-r from-brand-600 to-brand-700 hover:from-brand-500 hover:to-brand-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-brand-600/25 flex items-center justify-center space-x-2 transition transform active:scale-[0.99]">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                        <span>Emitir y Registrar Certificado</span>
+                    </button>
+                </form>
+
+                <!-- Tarjeta de Respuesta de Emisión -->
+                <div id="responseEmitir" class="hidden mt-6 pt-5 border-t border-slate-800">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </section>
+
+            <!-- PANEL 2: Verificación (Usuario Público) -->
+            <section class="glass-panel rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                            <i data-lucide="file-search" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-white">2. Portal de Verificación</h2>
+                            <p class="text-xs text-slate-400">Público General / Verificación de Inmutabilidad</p>
+                        </div>
+                    </div>
+                    <span class="text-xs font-mono px-2.5 py-1 bg-slate-800 text-slate-400 rounded-md border border-slate-700">
+                        POST /verificar
+                    </span>
+                </div>
+
+                <form id="verificarForm" onsubmit="handleVerificar(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1.5">Contenido / Documento a Verificar</label>
+                        <textarea id="textoVerificar" rows="6" required
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
+                            placeholder="Copie y pegue aquí el contenido exacto del certificado recibido para comprobar su autenticidad...">Documento oficial validado por SEM Ingenieros - Cohorte 2026</textarea>
+                    </div>
+
+                    <!-- Prueba de Alteración rápida -->
+                    <div class="flex items-center justify-between bg-slate-950/50 p-2.5 rounded-xl border border-slate-800">
+                        <span class="text-xs text-slate-400">Simulación de Ataque:</span>
+                        <button type="button" onclick="alterText()" class="text-xs font-medium text-rose-400 hover:text-rose-300 flex items-center space-x-1 bg-rose-500/10 px-2.5 py-1 rounded-lg border border-rose-500/20 transition">
+                            <i data-lucide="scissors" class="w-3.5 h-3.5"></i>
+                            <span>Alterar 1 Carácter</span>
+                        </button>
+                    </div>
+
+                    <button type="submit" id="btnVerificar"
+                        class="w-full mt-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold py-3 px-4 rounded-xl shadow-lg shadow-emerald-600/25 flex items-center justify-center space-x-2 transition transform active:scale-[0.99]">
+                        <i data-lucide="shield-search" class="w-4 h-4"></i>
+                        <span>Verificar Autenticidad Criptográfica</span>
+                    </button>
+                </form>
+
+                <!-- Tarjeta de Respuesta de Verificación -->
+                <div id="responseVerificar" class="hidden mt-6 pt-5 border-t border-slate-800">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Footer Corporativo -->
+    <footer class="border-t border-slate-800 bg-slate-950 py-6 mt-12 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p>© 2026 SEM Ingenieros S.A.S. — Todos los derechos reservados.</p>
+            <div class="flex items-center space-x-4">
+                <span class="flex items-center space-x-1"><i data-lucide="database" class="w-3.5 h-3.5 text-brand-500"></i><span>PostgreSQL</span></span>
+                <span class="flex items-center space-x-1"><i data-lucide="hash" class="w-3.5 h-3.5 text-emerald-500"></i><span>SHA-256 Strategy</span></span>
+                <span class="flex items-center space-x-1"><i data-lucide="layers" class="w-3.5 h-3.5 text-indigo-500"></i><span>Facade Pattern</span></span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODAL DE ARQUITECTURA TÉCNICA -->
+    <div id="archModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel bg-slate-900 rounded-2xl max-w-2xl w-full p-6 sm:p-8 border border-slate-700 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white p-2 rounded-lg bg-slate-800 transition">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <div class="flex items-center space-x-3 mb-6">
+                <div class="p-3 bg-brand-500/10 text-brand-500 rounded-xl border border-brand-500/20">
+                    <i data-lucide="boxes" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-white">Patrones de Diseño Implementados</h3>
+                    <p class="text-xs text-slate-400">Sustentación Arquitectónica para SEM Ingenieros</p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Strategy Pattern -->
+                <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700">
+                    <div class="flex items-center space-x-2 text-brand-400 font-semibold text-sm mb-1">
+                        <i data-lucide="cpu" class="w-4 h-4"></i>
+                        <span>1. Patrón Strategy (Algoritmo Criptográfico)</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Aísla la lógica de generación del hash SHA-256 detrás de una interfaz unificada. Permite cambiar o extender algoritmos de hashing en el futuro (ej. SHA-512, BLAKE3) sin alterar los controladores ni los servicios de negocio.
+                    </p>
+                </div>
+
+                <!-- Facade Pattern -->
+                <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700">
+                    <div class="flex items-center space-x-2 text-emerald-400 font-semibold text-sm mb-1">
+                        <i data-lucide="layers" class="w-4 h-4"></i>
+                        <span>2. Patrón Facade / Fachada (`FachadaValidacion`)</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Ofrece una interfaz simplificada (`registrarCertificado`, `verificarCertificado`) que encapsula la interacción compleja entre la estrategia de hashing, la preparación del buffer y las consultas al repositorio de la base de datos.
+                    </p>
+                </div>
+
+                <!-- Repository Pattern -->
+                <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700">
+                    <div class="flex items-center space-x-2 text-indigo-400 font-semibold text-sm mb-1">
+                        <i data-lucide="database" class="w-4 h-4"></i>
+                        <span>3. Patrón Repository (`CertificadoRepository`)</span>
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Separa la capa de acceso a datos de PostgreSQL del resto de la aplicación. Gestiona la inicialización de la tabla (`initTable`), la persistencia SQL en `certificados` y las consultas indexadas por el `hash_sha256`.
+                    </p>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-slate-800 flex justify-end">
+                <button onclick="closeModal()" class="px-5 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold transition">
+                    Entendido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGICA JAVASCRIPT AUTÓNOMA + BACKEND INTEGRATION -->
+    <script>
+        // Inicialización de Lucide Icons
+        lucide.createIcons();
+
+        // Almacenamiento Mock Local para redundancia
+        let localDatabase = [
+            {
+                id: 1,
+                codigo_certificado: "CERT-2026-001",
+                hash_sha256: "c73f2953ad99e955d64c55024063042edacaaf88f0a065236ade733551933bb2",
+                fecha_emision: "2026-10-26T22:04:50.069Z",
+                estado: "ACTIVO"
+            }
+        ];
+
+        const API_URL = 'http://localhost:3001/api/v1/certificados';
+
+        // Helper para calcular Hash SHA-256 localmente
+        function computeSHA256(text) {
+            return CryptoJS.SHA256(text).toString(CryptoJS.enc.Hex);
+        }
+
+        // Manejador de Emisión
+        async function handleEmitir(event) {
+            event.preventDefault();
+            const codigo = document.getElementById('codigoCertificado').value.trim();
+            const texto = document.getElementById('textoEmitir').value.trim();
+            const container = document.getElementById('responseEmitir');
+            
+            container.classList.remove('hidden');
+            container.innerHTML = `
+                <div class="flex items-center justify-center p-4 text-slate-400 text-sm space-x-2">
+                    <div class="w-4 h-4 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Procesando emisión en PostgreSQL...</span>
+                </div>
+            `;
+
+            try {
+                // Intento 1: Petición a servidor Express local
+                const response = await fetch(`${API_URL}/emitir`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ codigo_certificado: codigo, texto_certificado: texto })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    renderEmitirSuccess(container, data.data || data, 'API Backend (PostgreSQL Real)');
+                    return;
+                }
+                throw new Error("Respuesta no OK del backend");
+            } catch (err) {
+                // Fallback Local Autónomo si el backend no responde
+                const hash = computeSHA256(texto);
+                const newCert = {
+                    id: localDatabase.length + 1,
+                    codigo_certificado: codigo,
+                    hash_sha256: hash,
+                    fecha_emision: new Date().toISOString(),
+                    estado: "ACTIVO"
+                };
+                localDatabase.push(newCert);
+
+                setTimeout(() => {
+                    renderEmitirSuccess(container, newCert, 'Simulador In-Memory (Fallback)');
+                }, 400);
+            }
+        }
+
+        function renderEmitirSuccess(container, cert, source) {
+            container.innerHTML = `
+                <div class="bg-emerald-950/40 border border-emerald-500/30 rounded-xl p-4 text-xs font-mono space-y-2">
+                    <div class="flex items-center justify-between text-emerald-400 font-sans font-bold">
+                        <span class="flex items-center space-x-1.5">
+                            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                            <span>Certificado Registrado con Éxito</span>
+                        </span>
+                        <span class="text-[10px] bg-emerald-500/10 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/20">${source}</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-slate-300 pt-2 border-t border-slate-800/60 font-sans">
+                        <div><span class="text-slate-500">ID BD:</span> #${cert.id}</div>
+                        <div><span class="text-slate-500">Estado:</span> <span class="text-emerald-400 font-bold">${cert.estado}</span></div>
+                        <div class="col-span-2"><span class="text-slate-500">Código:</span> ${cert.codigo_certificado}</div>
+                        <div class="col-span-2"><span class="text-slate-500">Emisión:</span> ${new Date(cert.fecha_emision).toLocaleString()}</div>
+                    </div>
+                    <div class="pt-2">
+                        <span class="text-slate-500 block mb-1 font-sans">Huella Digital (SHA-256 Strategy):</span>
+                        <div class="bg-slate-950 p-2 rounded text-slate-300 break-all select-all border border-slate-800 text-[11px]">
+                            ${cert.hash_sha256}
+                        </div>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+        }
+
+        // Manejador de Verificación
+        async function handleVerificar(event) {
+            event.preventDefault();
+            const texto = document.getElementById('textoVerificar').value.trim();
+            const container = document.getElementById('responseVerificar');
+
+            container.classList.remove('hidden');
+            container.innerHTML = `
+                <div class="flex items-center justify-center p-4 text-slate-400 text-sm space-x-2">
+                    <div class="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                    <span>Calculando hash y consultando inmutabilidad...</span>
+                </div>
+            `;
+
+            try {
+                // Intento 1: Petición a servidor Express
+                const response = await fetch(`${API_URL}/verificar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ texto_certificado: texto })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    renderVerificarResult(container, data);
+                    return;
+                }
+                throw new Error("Error backend");
+            } catch (err) {
+                // Fallback Local Autónomo
+                const currentHash = computeSHA256(texto);
+                const found = localDatabase.find(c => c.hash_sha256 === currentHash);
+
+                setTimeout(() => {
+                    if (found) {
+                        renderVerificarResult(container, {
+                            valido: true,
+                            mensaje: "El certificado es auténtico y válido.",
+                            certificado: found
+                        });
+                    } else {
+                        renderVerificarResult(container, {
+                            valido: false,
+                            mensaje: "El certificado no existe en el sistema o ha sido alterado.",
+                            hash_calculado: currentHash
+                        });
+                    }
+                }, 400);
+            }
+        }
+
+        function renderVerificarResult(container, result) {
+            if (result.valido) {
+                const cert = result.certificado;
+                container.innerHTML = `
+                    <div class="bg-emerald-950/50 border border-emerald-500/40 rounded-xl p-4 text-xs space-y-3">
+                        <div class="flex items-center space-x-2 text-emerald-400 font-bold text-sm">
+                            <i data-lucide="shield-check" class="w-5 h-5 text-emerald-400"></i>
+                            <span>${result.mensaje}</span>
+                        </div>
+                        <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1.5 text-slate-300 font-mono">
+                            <div><span class="text-slate-500">Código Registro:</span> ${cert.codigo_certificado}</div>
+                            <div><span class="text-slate-500">ID PostgreSQL:</span> #${cert.id}</div>
+                            <div><span class="text-slate-500">Estado:</span> <span class="bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded text-[10px] font-bold">${cert.estado}</span></div>
+                            <div class="pt-1"><span class="text-slate-500">Hash SHA-256:</span></div>
+                            <div class="text-[10px] text-slate-400 break-all bg-slate-950 p-1.5 rounded border border-slate-850">${cert.hash_sha256}</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="bg-rose-950/50 border border-rose-500/40 rounded-xl p-4 text-xs space-y-3">
+                        <div class="flex items-center space-x-2 text-rose-400 font-bold text-sm">
+                            <i data-lucide="shield-alert" class="w-5 h-5 text-rose-400"></i>
+                            <span>¡Alerta! Certificado No Válido</span>
+                        </div>
+                        <p class="text-slate-300 text-xs">${result.mensaje}</p>
+                        <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 space-y-1 text-slate-400 font-mono text-[10px]">
+                            <span class="text-rose-400 font-bold">Hash Calculado no coincide con BD:</span>
+                            <div class="break-all bg-slate-950 p-1.5 rounded border border-slate-850">${result.hash_calculado || 'Mismatch en firma digital'}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        // Helpers de simulación rápida
+        function loadSample(type) {
+            if (type === 'cert1') {
+                document.getElementById('codigoCertificado').value = 'CERT-2026-001';
+                document.getElementById('textoEmitir').value = 'Documento oficial validado por SEM Ingenieros - Cohorte 2026';
+            } else {
+                document.getElementById('codigoCertificado').value = 'CERT-2026-002';
+                document.getElementById('textoEmitir').value = 'Diplomado en Gestión de Calidad ISO 9001 - Certificado No. 8943';
+            }
+        }
+
+        function alterText() {
+            const area = document.getElementById('textoVerificar');
+            area.value = area.value + " [Modificado]";
+        }
+
+        function openModal() {
+            document.getElementById('archModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('archModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>

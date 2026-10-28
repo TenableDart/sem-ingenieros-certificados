@@ -1,0 +1,22 @@
+sem-ingenieros-backend/
+├── package.json
+├── .env.example
+├── server.js
+└── src/
+    ├── config/
+    │   └── database.js          # Pool de conexiones a PostgreSQL
+    ├── routes/                  # package Routes
+    │   ├── certificado.routes.js
+    │   └── auth.routes.js
+    ├── controllers/             # package Controllers
+    │   ├── certificado.controller.js
+    │   └── auth.controller.js
+    ├── services/                # package Services (Lógica + Patrones GoF)
+    │   ├── facade/
+    │   │   └── fachadaValidacion.js
+    │   ├── strategies/
+    │   │   ├── hashingStrategy.interface.js
+    │   │   └── sha256HashingStrategy.js
+    │   └── auth.service.js
+    └── repositories/            # package Models / Relational Persistence
+        └── certificado.repository.js
